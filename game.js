@@ -1594,6 +1594,8 @@
       this.mouseTargetX = null;
 
       this.dom.startScreen.classList.add('hidden');
+      if (this.dom.registrationModal) this.dom.registrationModal.classList.add('hidden');
+      if (this.dom.leaderboardModal) this.dom.leaderboardModal.classList.add('hidden');
       this.dom.pauseScreen.classList.add('hidden');
       this.dom.gameoverScreen.classList.add('hidden');
       this.dom.powerupToast.classList.add('hidden');
@@ -1900,19 +1902,23 @@
 
     // Synchronize HUD DOM elements
     updateHud() {
-      this.dom.score.textContent = this.score;
-      this.dom.combo.textContent = `${this.combo}x`;
-      this.dom.startHighScore.textContent = this.highScore;
+      if (this.dom.score) this.dom.score.textContent = this.score;
+      if (this.dom.combo) this.dom.combo.textContent = `${this.combo}x`;
+      if (this.dom.startHighScore) this.dom.startHighScore.textContent = this.highScore;
 
       // Update Miss Meter Dots
-      this.dom.missDots.forEach((dot, idx) => {
-        dot.classList.toggle('filled', idx < this.misses);
-      });
+      if (this.dom.missDots) {
+        this.dom.missDots.forEach((dot, idx) => {
+          if (dot) dot.classList.toggle('filled', idx < this.misses);
+        });
+      }
 
       // Update Diyas (Lives)
-      this.dom.lifeDiyas.forEach((diya, idx) => {
-        diya.classList.toggle('lost', idx >= this.lives);
-      });
+      if (this.dom.lifeDiyas) {
+        this.dom.lifeDiyas.forEach((diya, idx) => {
+          if (diya) diya.classList.toggle('lost', idx >= this.lives);
+        });
+      }
     }
 
     // --- Main Game Loop (60 FPS) ---

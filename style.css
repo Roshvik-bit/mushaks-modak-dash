@@ -855,6 +855,31 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.devotee-score-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 8px;
+  border-left: 1px solid rgba(245, 158, 11, 0.25);
+  border-right: 1px solid rgba(245, 158, 11, 0.25);
+  margin: 0 8px;
+}
+
+.devotee-score-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--marigold);
+  letter-spacing: 0.8px;
+  line-height: 1;
+}
+
+.devotee-score-val {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--gold-pure);
+  line-height: 1.1;
+}
+
 .btn-edit-link {
   background: transparent;
   border: 1px solid rgba(245, 158, 11, 0.3);
