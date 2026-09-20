@@ -605,7 +605,36 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 16px;
+}
+
+.btn-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(30, 17, 54, 0.85);
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  color: var(--gold-light);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.btn-home:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: var(--gold-pure);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
+}
+
+.btn-home-icon {
+  font-size: 15px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.btn-home:hover .btn-home-icon {
+  transform: scale(1.18);
 }
 
 /* ==========================================================================

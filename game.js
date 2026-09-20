@@ -1193,12 +1193,15 @@
         btnResume: document.getElementById('btn-resume'),
         btnRestart: document.getElementById('btn-restart'),
         btnRestartPause: document.getElementById('btn-restart-pause'),
+        btnHome: document.getElementById('btn-home'),
+        btnHomePause: document.getElementById('btn-home-pause'),
         btnSound: document.getElementById('btn-sound'),
         soundIconOn: document.getElementById('sound-icon-on'),
         soundIconOff: document.getElementById('sound-icon-off'),
         heroPreviewCanvas: document.getElementById('heroPreviewCanvas')
       };
 
+      this.previewAnimId = null;
       this.initHeroPreview();
       this.initAmbientPetals();
       this.setupEventListeners();
@@ -1211,6 +1214,10 @@
 
     // Hero Preview in Start Screen Modal
     initHeroPreview() {
+      if (this.previewAnimId) {
+        cancelAnimationFrame(this.previewAnimId);
+        this.previewAnimId = null;
+      }
       const heroCtx = this.dom.heroPreviewCanvas.getContext('2d');
       const previewMushak = new Mushak();
       previewMushak.x = 102;
@@ -1231,10 +1238,12 @@
         heroCtx.restore();
 
         if (this.state === STATE.START) {
-          requestAnimationFrame(animatePreview);
+          this.previewAnimId = requestAnimationFrame(animatePreview);
+        } else {
+          this.previewAnimId = null;
         }
       };
-      animatePreview();
+      this.previewAnimId = requestAnimationFrame(animatePreview);
     }
 
     // Prepopulate peaceful falling marigold and lotus petals
@@ -1337,6 +1346,20 @@
         this.startGame();
       });
 
+      if (this.dom.btnHome) {
+        this.dom.btnHome.addEventListener('click', () => {
+          window.soundEngine.ensureRunning();
+          this.goToHomeScreen();
+        });
+      }
+
+      if (this.dom.btnHomePause) {
+        this.dom.btnHomePause.addEventListener('click', () => {
+          window.soundEngine.ensureRunning();
+          this.goToHomeScreen();
+        });
+      }
+
       // Sound Toggle
       this.dom.btnSound.addEventListener('click', () => {
         const isMuted = window.soundEngine.toggleMute();
@@ -1353,6 +1376,10 @@
 
     // --- State Transitions ---
     startGame() {
+      if (this.previewAnimId) {
+        cancelAnimationFrame(this.previewAnimId);
+        this.previewAnimId = null;
+      }
       this.score = 0;
       this.combo = 1;
       this.maxCombo = 1;
@@ -1364,6 +1391,7 @@
       this.gameTime = 0;
       this.spawnTimer = 0;
       this.magnetTimer = 0;
+      this.screenShake = 0;
       this.player.x = LOGICAL_WIDTH / 2;
       this.player.isInvulnerable = 0;
       this.mouseTargetX = null;
@@ -1375,6 +1403,36 @@
 
       this.updateHud();
       this.state = STATE.PLAYING;
+    }
+
+    goToHomeScreen() {
+      this.state = STATE.START;
+      this.score = 0;
+      this.combo = 1;
+      this.maxCombo = 1;
+      this.lives = 3;
+      this.misses = 0;
+      this.items = [];
+      this.particles = [];
+      this.floatingTexts = [];
+      this.gameTime = 0;
+      this.spawnTimer = 0;
+      this.magnetTimer = 0;
+      this.screenShake = 0;
+      this.player.x = LOGICAL_WIDTH / 2;
+      this.player.isInvulnerable = 0;
+      this.mouseTargetX = null;
+      this.keys.left = false;
+      this.keys.right = false;
+      this.inputDir = 0;
+
+      this.dom.gameoverScreen.classList.add('hidden');
+      this.dom.pauseScreen.classList.add('hidden');
+      this.dom.powerupToast.classList.add('hidden');
+      this.dom.startScreen.classList.remove('hidden');
+
+      this.updateHud();
+      this.initHeroPreview();
     }
 
     pauseGame() {
