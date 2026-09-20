@@ -1,17 +1,18 @@
 /**
- * Mushak's Modak Dash - Real-time Global Leaderboard & Devotee Registration
- * Powered by Supabase PostgreSQL REST API
+ * Mushak's Modak Dash - Secure Leaderboard Service
+ * 100% Protected: Zero Supabase URLs or API keys exposed to the client.
+ * All operations proxy securely through Vercel Serverless Function (/api/leaderboard).
  */
 
 (function () {
-  const SUPABASE_URL = 'https://ainetahaisilqyuljdul.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpbmV0YWhhaXNpbHF5dWxqZHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMTE3MzIsImV4cCI6MjEwNDY4NzczMn0.A1Pg2F3X0UiPEHlCHCLznFmTckrdtNV13xbn3XLKDwM';
+  const API_ENDPOINT = '/api/leaderboard';
   const PROFILE_STORAGE_KEY = 'mushak_devotee_profile_v1';
   const HIGH_SCORE_KEY = 'mushak_modak_high_score';
 
   class LeaderboardService {
     constructor() {
       this.profile = this.loadLocalProfile();
+      this.cachedCount = null;
     }
 
     // Load devotee profile from localStorage
@@ -41,10 +42,10 @@
       return 'devotee_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
     }
 
-    // Save or update devotee profile
+    // Save or update devotee profile via secure API proxy
     async saveProfile(name, university) {
-      const cleanName = (name || '').trim();
-      const cleanUni = (university || '').trim();
+      const cleanName = (name || '').trim().slice(0, 40);
+      const cleanUni = (university || '').trim().slice(0, 60);
 
       if (!cleanName || !cleanUni) {
         throw new Error('Please enter both your name and university.');
@@ -63,32 +64,30 @@
 
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(this.profile));
 
-      // Upsert to Supabase
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        await fetch(API_ENDPOINT, {
           method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            player_id: playerId,
-            player_name: cleanName,
-            university: cleanUni,
-            high_score: currentHighScore,
-            updated_at: new Date().toISOString()
+            action: 'save_profile',
+            payload: {
+              playerId,
+              playerName: cleanName,
+              university: cleanUni,
+              highScore: currentHighScore,
+              maxCombo: 1,
+              gamesPlayed: 1
+            }
           })
         });
       } catch (err) {
-        console.warn('Network issue registering devotee with leaderboard server', err);
+        console.warn('Network issue saving devotee profile:', err);
       }
 
       return this.profile;
     }
 
-    // Synchronize high score to Supabase if it beats personal record
+    // Synchronize high score to secure API proxy if it beats personal record
     async syncScore(score, maxCombo = 1) {
       if (!this.hasProfile()) return;
 
@@ -103,96 +102,77 @@
       }
 
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?player_id=eq.${encodeURIComponent(playerId)}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
+        await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            player_name: this.profile.playerName,
-            university: this.profile.university,
-            ...(isNewHighScore ? { high_score: score } : {}),
-            max_combo: maxCombo,
-            updated_at: new Date().toISOString()
+            action: 'sync_score',
+            payload: {
+              playerId,
+              playerName: this.profile.playerName,
+              university: this.profile.university,
+              score: isNewHighScore ? score : this.profile.highScore,
+              maxCombo
+            }
           })
         });
       } catch (err) {
-        console.warn('Could not sync score to global leaderboard', err);
+        console.warn('Could not sync score to leaderboard server:', err);
       }
     }
 
-    // Fetch top devotees and offerings
-    async fetchTopOfferings(limit = 25) {
+    // Fetch top devotees and offerings via secure API proxy
+    async fetchTopOfferings(limit = 30) {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/leaderboard?select=id,player_id,player_name,university,high_score,max_combo,updated_at&order=high_score.desc,updated_at.asc&limit=${limit}`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-          }
-        );
+        const res = await fetch(`${API_ENDPOINT}?limit=${encodeURIComponent(limit)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
+        const data = await res.json();
+        if (typeof data.totalCount === 'number') {
+          this.cachedCount = data.totalCount;
+        }
+        return data.items || [];
       } catch (err) {
         console.warn('Failed to fetch leaderboard:', err);
         return [];
       }
     }
 
-    // Delete a devotee record via secure server-side RPC
+    // Delete a devotee record via secure API proxy
     async deleteDevotee(id, pin) {
       if (!id || !pin) return false;
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/rpc/admin_delete_devotee`,
-          {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              devotee_id: id,
-              admin_pin: String(pin).trim()
-            })
-          }
-        );
+        const res = await fetch(API_ENDPOINT, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id,
+            pin: String(pin).trim()
+          })
+        });
         if (!res.ok) return false;
-        const success = await res.json();
-        return success === true;
+        const data = await res.json();
+        return data.success === true;
       } catch (err) {
         console.error('Failed to delete devotee record:', err);
         return false;
       }
     }
 
-    // Verify admin moderation PIN via secure server-side RPC
+    // Verify admin moderation PIN via secure API proxy
     async verifyAdminPin(pin) {
       if (!pin) return false;
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/rpc/verify_admin_pin`,
-          {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              admin_pin: String(pin).trim()
-            })
-          }
-        );
+        const res = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'verify_pin',
+            payload: { pin: String(pin).trim() }
+          })
+        });
         if (!res.ok) return false;
-        const valid = await res.json();
-        return valid === true;
+        const data = await res.json();
+        return data.valid === true;
       } catch (err) {
         return false;
       }
@@ -200,29 +180,10 @@
 
     // Fetch total participant count
     async fetchParticipantCount() {
+      if (this.cachedCount !== null) return this.cachedCount;
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/leaderboard?select=id`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Prefer': 'count=exact',
-              'Range': '0-0'
-            }
-          }
-        );
-        const range = res.headers.get('content-range');
-        if (range) {
-          const parts = range.split('/');
-          if (parts.length > 1) {
-            const count = parseInt(parts[1], 10);
-            if (!isNaN(count)) return count;
-          }
-        }
-        // Fallback: fetch list
-        const items = await this.fetchTopOfferings(100);
-        return items.length;
+        const items = await this.fetchTopOfferings(1);
+        return this.cachedCount || items.length;
       } catch (e) {
         return 1;
       }
