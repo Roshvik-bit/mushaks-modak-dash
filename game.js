@@ -153,11 +153,11 @@
       this.animTimer = Math.random() * 10;
 
       if (type === 'coconut') {
-        this.radius = 26;
+        this.radius = 28;
         this.rotSpeed = (Math.random() - 0.5) * 0.12;
       } else if (type === 'crow') {
-        this.radius = 26;
-        this.vx = (Math.random() - 0.5) * 1.5;
+        this.radius = 32;
+        this.vx = (Math.random() - 0.5) * 1.8;
         this.vy = speed * 1.15;
       } else if (type === 'maha') {
         this.radius = 34;
@@ -1499,8 +1499,8 @@
       const obstacleChance = Math.min(0.35, 0.15 + (this.score / 600) * 0.18);
 
       if (rand < obstacleChance) {
-        // Obstacle: Coconut or mischievous Crow
-        type = (Math.random() > 0.45 && this.score > 60) ? 'crow' : 'coconut';
+        // Obstacle: Coconut or mischievous Crow (appears early and scales up)
+        type = (Math.random() > 0.40 && (this.score > 20 || this.gameTime > 10)) ? 'crow' : 'coconut';
       } else {
         // Collectibles: Steamed, Golden, or Maha
         const modakRand = Math.random();
@@ -1518,24 +1518,42 @@
 
     // --- Catch & Collision Handling ---
     checkCollisions() {
-      const playerBox = {
-        x: this.player.x - 48,
-        y: this.player.y - 75,
-        w: 96,
-        h: 84
-      };
+      // Dual hitboxes to ensure full vertical coverage:
+      // 1. Lord Ganesha (Mukuta crown, halo, ears, face & torso seated atop Mushak)
+      // 2. Mushak (Offering plate, paws, body & feet)
+      const hitboxes = [
+        {
+          x: this.player.x - 44,
+          y: this.player.y - 124,
+          w: 88,
+          h: 80
+        },
+        {
+          x: this.player.x - 52,
+          y: this.player.y - 56,
+          w: 104,
+          h: 70
+        }
+      ];
 
       for (let i = this.items.length - 1; i >= 0; i--) {
         const item = this.items[i];
 
-        // AABB / Circle collision against Mushak's offering plate
-        const closeX = Math.max(playerBox.x, Math.min(item.x, playerBox.x + playerBox.w));
-        const closeY = Math.max(playerBox.y, Math.min(item.y, playerBox.y + playerBox.h));
-        const distX = item.x - closeX;
-        const distY = item.y - closeY;
-        const distSq = (distX * distX) + (distY * distY);
+        // Check collision against either Ganesha's upper hitbox or Mushak's lower hitbox
+        let collided = false;
+        for (let b = 0; b < hitboxes.length; b++) {
+          const box = hitboxes[b];
+          const closeX = Math.max(box.x, Math.min(item.x, box.x + box.w));
+          const closeY = Math.max(box.y, Math.min(item.y, box.y + box.h));
+          const distX = item.x - closeX;
+          const distY = item.y - closeY;
+          if ((distX * distX + distY * distY) < (item.radius * item.radius)) {
+            collided = true;
+            break;
+          }
+        }
 
-        if (distSq < (item.radius * item.radius)) {
+        if (collided) {
           // Collision Detected!
           if (item.isObstacle) {
             this.handleObstacleHit(item);
@@ -1635,8 +1653,16 @@
       if (this.player.isInvulnerable > 0) return;
 
       window.soundEngine.playHit();
-      this.screenShake = 0.3;
-      this.createHitSparks(obstacle.x, obstacle.y, '#ef4444', 20);
+      this.screenShake = 0.35;
+
+      if (obstacle.type === 'crow') {
+        // Mischievous crow feathers + impact sparks
+        this.createHitSparks(obstacle.x, obstacle.y, '#18181b', 16);
+        this.createHitSparks(obstacle.x, obstacle.y, '#ef4444', 12);
+      } else {
+        this.createHitSparks(obstacle.x, obstacle.y, '#78431e', 14);
+        this.createHitSparks(obstacle.x, obstacle.y, '#ef4444', 12);
+      }
 
       this.loseLife(obstacle.type === 'crow' ? "Crow Collision!" : "Coconut Bonk!");
     }
@@ -1644,10 +1670,10 @@
     loseLife(reason) {
       this.lives--;
       this.combo = 1;
-      this.player.isInvulnerable = 1.6; // 1.6 seconds invulnerability flicker
+      this.player.isInvulnerable = 0.85; // 0.85 seconds invulnerability buffer
       window.soundEngine.playLifeLost();
 
-      this.floatingTexts.push(new FloatingText("-1 LIFE!", this.player.x, this.player.y - 50, '#ef4444', 24));
+      this.floatingTexts.push(new FloatingText("-1 LIFE!", this.player.x, this.player.y - 70, '#ef4444', 26));
 
       this.updateHud();
 
