@@ -269,7 +269,15 @@
         
         <div class="leaderboard-stats-bar">
           <span>👥 Total Devotees: <strong id="lb-total-count">...</strong></span>
-          <button id="btn-lb-refresh" class="btn-text-action" type="button" title="Refresh Standings"><span class="refresh-icon">🔄</span> Refresh</button>
+          <div class="lb-stats-actions">
+            <button id="btn-lb-admin" class="btn-text-action btn-admin-toggle" type="button" title="Admin Moderation Access">🔒 Admin</button>
+            <button id="btn-lb-refresh" class="btn-text-action" type="button" title="Refresh Standings"><span class="refresh-icon">🔄</span> Refresh</button>
+          </div>
+        </div>
+
+        <div id="lb-admin-banner" class="lb-admin-banner hidden">
+          <span>🛡️ ADMIN MODE (Click 🗑️ to delete)</span>
+          <button id="btn-admin-exit" class="btn-admin-exit-btn" type="button">Exit</button>
         </div>
 
         <div class="leaderboard-table-container">

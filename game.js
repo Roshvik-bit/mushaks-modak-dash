@@ -1219,6 +1219,9 @@
         btnLbClose: document.getElementById('btn-lb-close'),
         btnLbPlay: document.getElementById('btn-lb-play'),
         btnLbRefresh: document.getElementById('btn-lb-refresh'),
+        btnLbAdmin: document.getElementById('btn-lb-admin'),
+        lbAdminBanner: document.getElementById('lb-admin-banner'),
+        btnAdminExit: document.getElementById('btn-admin-exit'),
         lbTotalCount: document.getElementById('lb-total-count'),
         lbLoading: document.getElementById('lb-loading'),
         lbEmpty: document.getElementById('lb-empty'),
@@ -1227,6 +1230,7 @@
         lbPlayerPinnedContent: document.getElementById('lb-player-pinned-content')
       };
 
+      this.isAdminMode = false;
       this.previewAnimId = null;
       this.initHeroPreview();
       this.initAmbientPetals();
@@ -1451,6 +1455,28 @@
       if (this.dom.btnLbPlay) this.dom.btnLbPlay.addEventListener('click', closeLb);
       if (this.dom.btnLbRefresh) this.dom.btnLbRefresh.addEventListener('click', () => this.loadLeaderboardData());
 
+      // Admin Moderation Toggle
+      if (this.dom.btnLbAdmin) {
+        this.dom.btnLbAdmin.addEventListener('click', () => {
+          if (this.isAdminMode) {
+            this.setAdminMode(false);
+            return;
+          }
+          const pin = prompt('Enter Admin PIN to moderate records:');
+          if (pin === null) return;
+          if (window.leaderboardService && window.leaderboardService.verifyAdminPin(pin)) {
+            this.setAdminMode(true);
+          } else {
+            alert('Incorrect Admin PIN.');
+          }
+        });
+      }
+      if (this.dom.btnAdminExit) {
+        this.dom.btnAdminExit.addEventListener('click', () => {
+          this.setAdminMode(false);
+        });
+      }
+
       // Sound Toggle
       this.dom.btnSound.addEventListener('click', () => {
         const isMuted = window.soundEngine.toggleMute();
@@ -1489,6 +1515,18 @@
 
     hideLeaderboard() {
       this.dom.leaderboardModal.classList.add('hidden');
+    }
+
+    setAdminMode(active) {
+      this.isAdminMode = !!active;
+      if (this.dom.lbAdminBanner) {
+        this.dom.lbAdminBanner.classList.toggle('hidden', !this.isAdminMode);
+      }
+      if (this.dom.btnLbAdmin) {
+        this.dom.btnLbAdmin.textContent = this.isAdminMode ? '🔓 Exit Admin' : '🔒 Admin';
+        this.dom.btnLbAdmin.style.color = this.isAdminMode ? '#fca5a5' : '';
+      }
+      this.loadLeaderboardData();
     }
 
     async loadLeaderboardData() {
@@ -1539,6 +1577,12 @@
 
           const row = document.createElement('div');
           row.className = `lb-row ${rank === 1 ? 'top-1' : ''} ${isCurrent ? 'is-current-player' : ''}`;
+
+          let deleteBtnHtml = '';
+          if (this.isAdminMode) {
+            deleteBtnHtml = `<button class="lb-btn-delete" type="button" title="Delete record" data-id="${item.id}" data-name="${this.escapeHtml(item.player_name)}">🗑️</button>`;
+          }
+
           row.innerHTML = `
             <div class="lb-rank">${rankBadge}</div>
             <div class="lb-devotee">
@@ -1549,7 +1593,33 @@
               <div class="lb-score-val">${item.high_score}</div>
               <div class="lb-score-unit">MODAKS</div>
             </div>
+            ${deleteBtnHtml}
           `;
+
+          if (this.isAdminMode) {
+            const delBtn = row.querySelector('.lb-btn-delete');
+            if (delBtn) {
+              delBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const devoteeId = delBtn.getAttribute('data-id');
+                const devoteeName = delBtn.getAttribute('data-name');
+                if (!confirm(`Are you sure you want to remove "${devoteeName}" from the Global Leaderboard?`)) {
+                  return;
+                }
+                delBtn.disabled = true;
+                delBtn.textContent = '⏳';
+                const ok = await window.leaderboardService.deleteDevotee(devoteeId);
+                if (ok) {
+                  this.loadLeaderboardData();
+                } else {
+                  alert('Failed to delete devotee record. Please check your connection.');
+                  delBtn.disabled = false;
+                  delBtn.textContent = '🗑️';
+                }
+              });
+            }
+          }
+
           fragment.appendChild(row);
         });
 

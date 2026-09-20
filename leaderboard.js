@@ -8,6 +8,7 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpbmV0YWhhaXNpbHF5dWxqZHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMTE3MzIsImV4cCI6MjEwNDY4NzczMn0.A1Pg2F3X0UiPEHlCHCLznFmTckrdtNV13xbn3XLKDwM';
   const PROFILE_STORAGE_KEY = 'mushak_devotee_profile_v1';
   const HIGH_SCORE_KEY = 'mushak_modak_high_score';
+  const ADMIN_PIN = '1008';
 
   class LeaderboardService {
     constructor() {
@@ -128,7 +129,7 @@
     async fetchTopOfferings(limit = 25) {
       try {
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/leaderboard?select=player_id,player_name,university,high_score,max_combo,updated_at&order=high_score.desc,updated_at.asc&limit=${limit}`,
+          `${SUPABASE_URL}/rest/v1/leaderboard?select=id,player_id,player_name,university,high_score,max_combo,updated_at&order=high_score.desc,updated_at.asc&limit=${limit}`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -142,6 +143,33 @@
         console.warn('Failed to fetch leaderboard:', err);
         return [];
       }
+    }
+
+    // Delete a devotee record by Supabase ID
+    async deleteDevotee(id) {
+      if (!id) return false;
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/leaderboard?id=eq.${encodeURIComponent(id)}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        return res.ok;
+      } catch (err) {
+        console.error('Failed to delete devotee record:', err);
+        return false;
+      }
+    }
+
+    // Verify admin moderation PIN
+    verifyAdminPin(pin) {
+      return String(pin).trim() === ADMIN_PIN;
     }
 
     // Fetch total participant count
