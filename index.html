@@ -53,6 +53,9 @@
         
         <!-- Controls & Sound Toggles -->
         <div class="hud-actions">
+          <button id="btn-leaderboard-hud" class="icon-btn" aria-label="View Leaderboard" title="View Global Leaderboard">
+            <span style="font-size: 15px; line-height: 1;">🏆</span>
+          </button>
           <button id="btn-pause" class="icon-btn" aria-label="Pause Game" title="Pause Game (Spacebar)">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
               <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
@@ -127,15 +130,24 @@
           <span class="legend-badge">📱 Mobile: <b>Drag / Touch Screen</b></span>
         </div>
 
-        <div class="high-score-banner">
-          <span>🏆 Best Offering:</span>
-          <strong id="start-high-score">0</strong>
+        <div class="devotee-profile-banner" id="devotee-profile-banner">
+          <div class="devotee-info">
+            <span class="devotee-icon">🪔</span>
+            <span id="devotee-display-name" class="devotee-name">Devotee</span>
+            <span id="devotee-display-uni" class="devotee-uni">University</span>
+          </div>
+          <button id="btn-edit-profile" class="btn-edit-link" type="button" title="Change Name or University">Edit</button>
         </div>
 
         <button id="btn-start" class="btn-play-primary" type="button">
           <span class="btn-shine"></span>
           <span class="btn-text">START DASH</span>
           <span class="btn-subtext">Ganpati Bappa Morya! 🙏</span>
+        </button>
+
+        <button id="btn-leaderboard-start" class="btn-secondary btn-home" type="button" style="margin-top: 10px;">
+          <span>🏆</span>
+          <span>GLOBAL LEADERBOARD</span>
         </button>
       </div>
     </section>
@@ -199,10 +211,77 @@
             <span class="btn-text">PLAY AGAIN</span>
             <span class="btn-subtext">Catch more modaks for Bappa! 🐭</span>
           </button>
+          <button id="btn-leaderboard-gameover" class="btn-secondary btn-home" type="button">
+            <span>🏆</span>
+            <span>VIEW LEADERBOARD</span>
+          </button>
           <button id="btn-home" class="btn-secondary btn-home" type="button">
             <span class="btn-home-icon">🏠</span>
             <span>BACK TO HOME</span>
           </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEVOTEE REGISTRATION MODAL (Shown on first visit) -->
+    <section id="registration-modal" class="overlay-modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card registration-card">
+        <div class="festive-badge">🕉️ DEVOTEE REGISTRATION</div>
+        <h2 class="modal-title">Welcome Devotee!</h2>
+        <p class="registration-desc">Enter your name and university to offer modaks to Lord Ganesha and compete on the global leaderboard!</p>
+        
+        <form id="form-registration" class="registration-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="reg-name" class="form-label">Full Name *</label>
+            <input type="text" id="reg-name" class="form-input" placeholder="e.g. Aarav Sharma" maxlength="40" required autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label for="reg-uni" class="form-label">College / University *</label>
+            <input type="text" id="reg-uni" class="form-input" placeholder="e.g. IIT Bombay / BITS Pilani" maxlength="60" required autocomplete="organization">
+          </div>
+
+          <div id="reg-error" class="form-error hidden"></div>
+
+          <button id="btn-reg-submit" class="btn-play-primary" type="submit">
+            <span class="btn-shine"></span>
+            <span class="btn-text">ENTER TEMPLE & PLAY</span>
+            <span class="btn-subtext">Ganpati Bappa Morya! 🙏</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- GLOBAL LEADERBOARD MODAL -->
+    <section id="leaderboard-modal" class="overlay-modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card leaderboard-card">
+        <div class="modal-header-row">
+          <div class="festive-badge">🏆 GLOBAL LEADERBOARD</div>
+          <button id="btn-lb-close" class="close-icon-btn" aria-label="Close Leaderboard">✕</button>
+        </div>
+
+        <h2 class="leaderboard-title">Temple Honor Roll</h2>
+        <p class="leaderboard-subtitle">Top Offerings Across Universities</p>
+        
+        <div class="leaderboard-stats-bar">
+          <span>👥 Total Devotees: <strong id="lb-total-count">...</strong></span>
+          <button id="btn-lb-refresh" class="btn-text-action" type="button" title="Refresh Standings">🔄 Refresh</button>
+        </div>
+
+        <div class="leaderboard-table-container">
+          <div id="lb-loading" class="lb-status-msg">Connecting to temple records... 🪔</div>
+          <div id="lb-empty" class="lb-status-msg hidden">Be the first devotee to offer modaks to Bappa!</div>
+          <div id="lb-list" class="leaderboard-list"></div>
+        </div>
+
+        <!-- Current Player Standings -->
+        <div id="lb-player-pinned" class="lb-player-pinned hidden">
+          <span class="pinned-label">YOUR OFFERING:</span>
+          <div class="pinned-content" id="lb-player-pinned-content"></div>
+        </div>
+
+        <div class="modal-actions-single">
+          <button id="btn-lb-play" class="btn-secondary" type="button">CLOSE</button>
         </div>
       </div>
     </section>
@@ -219,7 +298,8 @@
     <p>Crafted with devotion for the <strong>Ganesh Chaturthi Game Design Contest</strong> • Mangal Murti Morya!</p>
   </footer>
 
-  <!-- Scripts: Sound Engine & Core Game Engine -->
+  <!-- Scripts: Leaderboard, Sound Engine & Core Game Engine -->
+  <script src="leaderboard.js"></script>
   <script src="audio.js"></script>
   <script src="game.js"></script>
 </body>

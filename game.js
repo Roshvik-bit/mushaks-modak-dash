@@ -1198,7 +1198,33 @@
         btnSound: document.getElementById('btn-sound'),
         soundIconOn: document.getElementById('sound-icon-on'),
         soundIconOff: document.getElementById('sound-icon-off'),
-        heroPreviewCanvas: document.getElementById('heroPreviewCanvas')
+        heroPreviewCanvas: document.getElementById('heroPreviewCanvas'),
+
+        // Registration & Leaderboard DOM
+        registrationModal: document.getElementById('registration-modal'),
+        formRegistration: document.getElementById('form-registration'),
+        regName: document.getElementById('reg-name'),
+        regUni: document.getElementById('reg-uni'),
+        regError: document.getElementById('reg-error'),
+        btnRegSubmit: document.getElementById('btn-reg-submit'),
+        devoteeProfileBanner: document.getElementById('devotee-profile-banner'),
+        devoteeDisplayName: document.getElementById('devotee-display-name'),
+        devoteeDisplayUni: document.getElementById('devotee-display-uni'),
+        btnEditProfile: document.getElementById('btn-edit-profile'),
+
+        leaderboardModal: document.getElementById('leaderboard-modal'),
+        btnLeaderboardHud: document.getElementById('btn-leaderboard-hud'),
+        btnLeaderboardStart: document.getElementById('btn-leaderboard-start'),
+        btnLeaderboardGameover: document.getElementById('btn-leaderboard-gameover'),
+        btnLbClose: document.getElementById('btn-lb-close'),
+        btnLbPlay: document.getElementById('btn-lb-play'),
+        btnLbRefresh: document.getElementById('btn-lb-refresh'),
+        lbTotalCount: document.getElementById('lb-total-count'),
+        lbLoading: document.getElementById('lb-loading'),
+        lbEmpty: document.getElementById('lb-empty'),
+        lbList: document.getElementById('lb-list'),
+        lbPlayerPinned: document.getElementById('lb-player-pinned'),
+        lbPlayerPinnedContent: document.getElementById('lb-player-pinned-content')
       };
 
       this.previewAnimId = null;
@@ -1206,6 +1232,7 @@
       this.initAmbientPetals();
       this.setupEventListeners();
       this.updateHud();
+      this.checkRegistrationOnLoad();
 
       // Start RAF Loop
       this.lastTime = performance.now();
@@ -1322,6 +1349,10 @@
       // Buttons
       this.dom.btnStart.addEventListener('click', () => {
         window.soundEngine.ensureRunning();
+        if (!window.leaderboardService || !window.leaderboardService.hasProfile()) {
+          this.dom.registrationModal.classList.remove('hidden');
+          return;
+        }
         window.soundEngine.playGameStart();
         this.startGame();
       });
@@ -1360,6 +1391,66 @@
         });
       }
 
+      // Registration Form Listeners
+      if (this.dom.formRegistration) {
+        this.dom.formRegistration.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = (this.dom.regName.value || '').trim();
+          const uni = (this.dom.regUni.value || '').trim();
+
+          if (!name || !uni) {
+            this.dom.regError.textContent = 'Please enter both your name and university!';
+            this.dom.regError.classList.remove('hidden');
+            return;
+          }
+
+          this.dom.regError.classList.add('hidden');
+          this.dom.btnRegSubmit.disabled = true;
+
+          try {
+            await window.leaderboardService.saveProfile(name, uni);
+            this.updateDevoteeBanner();
+            this.dom.registrationModal.classList.add('hidden');
+            window.soundEngine.ensureRunning();
+            window.soundEngine.playGameStart();
+            this.startGame();
+          } catch (err) {
+            this.dom.regError.textContent = err.message || 'Error saving profile';
+            this.dom.regError.classList.remove('hidden');
+          } finally {
+            this.dom.btnRegSubmit.disabled = false;
+          }
+        });
+      }
+
+      if (this.dom.btnEditProfile) {
+        this.dom.btnEditProfile.addEventListener('click', () => {
+          const profile = window.leaderboardService ? window.leaderboardService.getProfile() : null;
+          if (profile) {
+            this.dom.regName.value = profile.playerName || '';
+            this.dom.regUni.value = profile.university || '';
+          }
+          this.dom.regError.classList.add('hidden');
+          this.dom.registrationModal.classList.remove('hidden');
+        });
+      }
+
+      // Leaderboard Modal Triggers
+      const openLb = () => {
+        window.soundEngine.ensureRunning();
+        this.showLeaderboard();
+      };
+      const closeLb = () => {
+        this.hideLeaderboard();
+      };
+
+      if (this.dom.btnLeaderboardHud) this.dom.btnLeaderboardHud.addEventListener('click', openLb);
+      if (this.dom.btnLeaderboardStart) this.dom.btnLeaderboardStart.addEventListener('click', openLb);
+      if (this.dom.btnLeaderboardGameover) this.dom.btnLeaderboardGameover.addEventListener('click', openLb);
+      if (this.dom.btnLbClose) this.dom.btnLbClose.addEventListener('click', closeLb);
+      if (this.dom.btnLbPlay) this.dom.btnLbPlay.addEventListener('click', closeLb);
+      if (this.dom.btnLbRefresh) this.dom.btnLbRefresh.addEventListener('click', () => this.loadLeaderboardData());
+
       // Sound Toggle
       this.dom.btnSound.addEventListener('click', () => {
         const isMuted = window.soundEngine.toggleMute();
@@ -1372,6 +1463,112 @@
       if (this.keys.left && !this.keys.right) this.inputDir = -1;
       else if (this.keys.right && !this.keys.left) this.inputDir = 1;
       else this.inputDir = 0;
+    }
+
+    // --- Devotee & Leaderboard UI Helpers ---
+    checkRegistrationOnLoad() {
+      if (!window.leaderboardService || !window.leaderboardService.hasProfile()) {
+        this.dom.registrationModal.classList.remove('hidden');
+      } else {
+        this.updateDevoteeBanner();
+      }
+    }
+
+    updateDevoteeBanner() {
+      const profile = window.leaderboardService ? window.leaderboardService.getProfile() : null;
+      if (profile && this.dom.devoteeDisplayName && this.dom.devoteeDisplayUni) {
+        this.dom.devoteeDisplayName.textContent = profile.playerName;
+        this.dom.devoteeDisplayUni.textContent = profile.university;
+      }
+    }
+
+    showLeaderboard() {
+      this.dom.leaderboardModal.classList.remove('hidden');
+      this.loadLeaderboardData();
+    }
+
+    hideLeaderboard() {
+      this.dom.leaderboardModal.classList.add('hidden');
+    }
+
+    async loadLeaderboardData() {
+      this.dom.lbLoading.classList.remove('hidden');
+      this.dom.lbEmpty.classList.add('hidden');
+      this.dom.lbList.innerHTML = '';
+      this.dom.lbPlayerPinned.classList.add('hidden');
+
+      const profile = window.leaderboardService ? window.leaderboardService.getProfile() : null;
+
+      try {
+        const [items, totalCount] = await Promise.all([
+          window.leaderboardService.fetchTopOfferings(30),
+          window.leaderboardService.fetchParticipantCount()
+        ]);
+
+        this.dom.lbTotalCount.textContent = totalCount || (items.length || 0);
+        this.dom.lbLoading.classList.add('hidden');
+
+        if (!items || items.length === 0) {
+          this.dom.lbEmpty.classList.remove('hidden');
+          return;
+        }
+
+        let playerInTop = false;
+
+        items.forEach((item, index) => {
+          const rank = index + 1;
+          const isCurrent = profile && profile.playerId === item.player_id;
+          if (isCurrent) playerInTop = true;
+
+          let rankBadge = rank.toString();
+          if (rank === 1) rankBadge = '🥇';
+          else if (rank === 2) rankBadge = '🥈';
+          else if (rank === 3) rankBadge = '🥉';
+
+          const row = document.createElement('div');
+          row.className = `lb-row ${rank === 1 ? 'top-1' : ''} ${isCurrent ? 'is-current-player' : ''}`;
+          row.innerHTML = `
+            <div class="lb-rank">${rankBadge}</div>
+            <div class="lb-devotee">
+              <div class="lb-player-name">${this.escapeHtml(item.player_name)}${isCurrent ? ' (You)' : ''}</div>
+              <div class="lb-university">${this.escapeHtml(item.university)}</div>
+            </div>
+            <div class="lb-score-col">
+              <div class="lb-score-val">${item.high_score}</div>
+              <div class="lb-score-unit">MODAKS</div>
+            </div>
+          `;
+          this.dom.lbList.appendChild(row);
+        });
+
+        // If registered and not in top list, show pinned standing
+        if (profile && !playerInTop) {
+          this.dom.lbPlayerPinned.classList.remove('hidden');
+          this.dom.lbPlayerPinnedContent.innerHTML = `
+            <div class="lb-row is-current-player" style="margin: 0;">
+              <div class="lb-rank">🌟</div>
+              <div class="lb-devotee">
+                <div class="lb-player-name">${this.escapeHtml(profile.playerName)} (You)</div>
+                <div class="lb-university">${this.escapeHtml(profile.university)}</div>
+              </div>
+              <div class="lb-score-col">
+                <div class="lb-score-val">${profile.highScore || 0}</div>
+                <div class="lb-score-unit">MODAKS</div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error('Error loading leaderboard:', err);
+        this.dom.lbLoading.textContent = 'Could not load leaderboard. Please check your connection.';
+      }
+    }
+
+    escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
     }
 
     // --- State Transitions ---
@@ -1432,6 +1629,7 @@
       this.dom.startScreen.classList.remove('hidden');
 
       this.updateHud();
+      this.updateDevoteeBanner();
       this.initHeroPreview();
     }
 
@@ -1458,6 +1656,11 @@
       if (isNewRecord) {
         this.highScore = this.score;
         localStorage.setItem(HIGH_SCORE_KEY, this.highScore.toString());
+      }
+
+      // Synchronize with global Supabase leaderboard!
+      if (window.leaderboardService) {
+        window.leaderboardService.syncScore(this.score, this.maxCombo);
       }
 
       this.dom.finalScore.textContent = this.score;
