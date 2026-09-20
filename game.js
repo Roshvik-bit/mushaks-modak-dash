@@ -1219,7 +1219,7 @@
         btnLbClose: document.getElementById('btn-lb-close'),
         btnLbPlay: document.getElementById('btn-lb-play'),
         btnLbRefresh: document.getElementById('btn-lb-refresh'),
-        btnLbAdmin: document.getElementById('btn-lb-admin'),
+        lbTitle: document.getElementById('lb-title'),
         lbAdminBanner: document.getElementById('lb-admin-banner'),
         btnAdminExit: document.getElementById('btn-admin-exit'),
         lbTotalCount: document.getElementById('lb-total-count'),
@@ -1231,6 +1231,7 @@
       };
 
       this.isAdminMode = false;
+      this.adminSessionPin = null;
       this.previewAnimId = null;
       this.initHeroPreview();
       this.initAmbientPetals();
@@ -1399,11 +1400,18 @@
       if (this.dom.formRegistration) {
         this.dom.formRegistration.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const name = (this.dom.regName.value || '').trim();
-          const uni = (this.dom.regUni.value || '').trim();
+          const name = (this.dom.regName.value || '').trim().slice(0, 40);
+          const uni = (this.dom.regUni.value || '').trim().slice(0, 60);
 
           if (!name || !uni) {
             this.dom.regError.textContent = 'Please enter both your name and university!';
+            this.dom.regError.classList.remove('hidden');
+            return;
+          }
+
+          // Reject HTML, script, or control characters to prevent stored injection
+          if (/[<>{}\\^`~]/.test(name) || /[<>{}\\^`~]/.test(uni)) {
+            this.dom.regError.textContent = 'Special characters like < > { } \\ are not allowed.';
             this.dom.regError.classList.remove('hidden');
             return;
           }
@@ -1455,22 +1463,29 @@
       if (this.dom.btnLbPlay) this.dom.btnLbPlay.addEventListener('click', closeLb);
       if (this.dom.btnLbRefresh) this.dom.btnLbRefresh.addEventListener('click', () => this.loadLeaderboardData());
 
-      // Admin Moderation Toggle
-      if (this.dom.btnLbAdmin) {
-        this.dom.btnLbAdmin.addEventListener('click', () => {
-          if (this.isAdminMode) {
-            this.setAdminMode(false);
-            return;
-          }
-          const pin = prompt('Enter Admin PIN to moderate records:');
-          if (pin === null) return;
-          if (window.leaderboardService && window.leaderboardService.verifyAdminPin(pin)) {
-            this.setAdminMode(true);
-          } else {
-            alert('Incorrect Admin PIN.');
+      // Secret Admin Moderation Access: 5 quick taps on "Temple Honor Roll" title
+      let adminTapCount = 0;
+      let adminTapTimer = null;
+      if (this.dom.lbTitle) {
+        this.dom.lbTitle.addEventListener('click', async () => {
+          adminTapCount++;
+          clearTimeout(adminTapTimer);
+          adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 2200);
+          if (adminTapCount >= 5) {
+            adminTapCount = 0;
+            const pin = prompt('Enter Temple Guardian Security PIN:');
+            if (!pin) return;
+            const valid = await window.leaderboardService.verifyAdminPin(pin);
+            if (valid) {
+              this.adminSessionPin = pin.trim();
+              this.setAdminMode(true);
+            } else {
+              alert('Access Denied: Invalid Security PIN.');
+            }
           }
         });
       }
+
       if (this.dom.btnAdminExit) {
         this.dom.btnAdminExit.addEventListener('click', () => {
           this.setAdminMode(false);
@@ -1519,12 +1534,11 @@
 
     setAdminMode(active) {
       this.isAdminMode = !!active;
+      if (!this.isAdminMode) {
+        this.adminSessionPin = null;
+      }
       if (this.dom.lbAdminBanner) {
         this.dom.lbAdminBanner.classList.toggle('hidden', !this.isAdminMode);
-      }
-      if (this.dom.btnLbAdmin) {
-        this.dom.btnLbAdmin.textContent = this.isAdminMode ? '🔓 Exit Admin' : '🔒 Admin';
-        this.dom.btnLbAdmin.style.color = this.isAdminMode ? '#fca5a5' : '';
       }
       this.loadLeaderboardData();
     }
@@ -1578,11 +1592,6 @@
           const row = document.createElement('div');
           row.className = `lb-row ${rank === 1 ? 'top-1' : ''} ${isCurrent ? 'is-current-player' : ''}`;
 
-          let deleteBtnHtml = '';
-          if (this.isAdminMode) {
-            deleteBtnHtml = `<button class="lb-btn-delete" type="button" title="Delete record" data-id="${item.id}" data-name="${this.escapeHtml(item.player_name)}">🗑️</button>`;
-          }
-
           row.innerHTML = `
             <div class="lb-rank">${rankBadge}</div>
             <div class="lb-devotee">
@@ -1593,31 +1602,31 @@
               <div class="lb-score-val">${item.high_score}</div>
               <div class="lb-score-unit">MODAKS</div>
             </div>
-            ${deleteBtnHtml}
           `;
 
           if (this.isAdminMode) {
-            const delBtn = row.querySelector('.lb-btn-delete');
-            if (delBtn) {
-              delBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const devoteeId = delBtn.getAttribute('data-id');
-                const devoteeName = delBtn.getAttribute('data-name');
-                if (!confirm(`Are you sure you want to remove "${devoteeName}" from the Global Leaderboard?`)) {
-                  return;
-                }
-                delBtn.disabled = true;
-                delBtn.textContent = '⏳';
-                const ok = await window.leaderboardService.deleteDevotee(devoteeId);
-                if (ok) {
-                  this.loadLeaderboardData();
-                } else {
-                  alert('Failed to delete devotee record. Please check your connection.');
-                  delBtn.disabled = false;
-                  delBtn.textContent = '🗑️';
-                }
-              });
-            }
+            const delBtn = document.createElement('button');
+            delBtn.className = 'lb-btn-delete';
+            delBtn.type = 'button';
+            delBtn.title = 'Delete record';
+            delBtn.textContent = '🗑️';
+            delBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (!confirm(`Are you sure you want to remove "${item.player_name}" from the Global Leaderboard?`)) {
+                return;
+              }
+              delBtn.disabled = true;
+              delBtn.textContent = '⏳';
+              const ok = await window.leaderboardService.deleteDevotee(item.id, this.adminSessionPin);
+              if (ok) {
+                this.loadLeaderboardData();
+              } else {
+                alert('Failed to delete devotee record. Verification failed or check your connection.');
+                delBtn.disabled = false;
+                delBtn.textContent = '🗑️';
+              }
+            });
+            row.appendChild(delBtn);
           }
 
           fragment.appendChild(row);
@@ -1661,9 +1670,12 @@
 
     escapeHtml(str) {
       if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     // --- State Transitions ---
