@@ -1492,10 +1492,19 @@
     }
 
     async loadLeaderboardData() {
-      this.dom.lbLoading.classList.remove('hidden');
+      if (this.isLoadingLeaderboard) return;
+      this.isLoadingLeaderboard = true;
+
+      if (this.dom.btnLbRefresh) {
+        this.dom.btnLbRefresh.disabled = true;
+        this.dom.btnLbRefresh.classList.add('spinning');
+      }
+
+      if (!this.dom.lbList.hasChildNodes()) {
+        this.dom.lbLoading.textContent = 'Connecting to temple records... 🪔';
+        this.dom.lbLoading.classList.remove('hidden');
+      }
       this.dom.lbEmpty.classList.add('hidden');
-      this.dom.lbList.innerHTML = '';
-      this.dom.lbPlayerPinned.classList.add('hidden');
 
       const profile = window.leaderboardService ? window.leaderboardService.getProfile() : null;
 
@@ -1505,15 +1514,18 @@
           window.leaderboardService.fetchParticipantCount()
         ]);
 
-        this.dom.lbTotalCount.textContent = totalCount || (items.length || 0);
+        this.dom.lbTotalCount.textContent = totalCount || (items ? items.length : 0);
         this.dom.lbLoading.classList.add('hidden');
 
         if (!items || items.length === 0) {
+          this.dom.lbList.replaceChildren();
           this.dom.lbEmpty.classList.remove('hidden');
+          this.dom.lbPlayerPinned.classList.add('hidden');
           return;
         }
 
         let playerInTop = false;
+        const fragment = document.createDocumentFragment();
 
         items.forEach((item, index) => {
           const rank = index + 1;
@@ -1538,8 +1550,10 @@
               <div class="lb-score-unit">MODAKS</div>
             </div>
           `;
-          this.dom.lbList.appendChild(row);
+          fragment.appendChild(row);
         });
+
+        this.dom.lbList.replaceChildren(fragment);
 
         // If registered and not in top list, show pinned standing
         if (profile && !playerInTop) {
@@ -1557,10 +1571,21 @@
               </div>
             </div>
           `;
+        } else {
+          this.dom.lbPlayerPinned.classList.add('hidden');
         }
       } catch (err) {
         console.error('Error loading leaderboard:', err);
-        this.dom.lbLoading.textContent = 'Could not load leaderboard. Please check your connection.';
+        if (!this.dom.lbList.hasChildNodes()) {
+          this.dom.lbLoading.textContent = 'Could not load leaderboard. Please check your connection.';
+          this.dom.lbLoading.classList.remove('hidden');
+        }
+      } finally {
+        this.isLoadingLeaderboard = false;
+        if (this.dom.btnLbRefresh) {
+          this.dom.btnLbRefresh.disabled = false;
+          this.dom.btnLbRefresh.classList.remove('spinning');
+        }
       }
     }
 

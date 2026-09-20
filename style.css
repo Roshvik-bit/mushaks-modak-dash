@@ -1055,6 +1055,23 @@ body {
   background: rgba(245, 158, 11, 0.2);
 }
 
+.btn-text-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-text-action.spinning .refresh-icon {
+  display: inline-block;
+  animation: lbSpin 0.75s linear infinite;
+}
+
+@keyframes lbSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
 .leaderboard-table-container {
   flex: 1;
   overflow-y: auto;
