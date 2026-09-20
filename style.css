@@ -118,15 +118,115 @@ body {
   z-index: 10;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 600px), (pointer: coarse) and (max-width: 768px) {
   .game-container {
     max-width: 100vw;
     max-height: 100vh;
+    height: 100%;
     border-radius: 0;
     box-shadow: none;
     border: none;
   }
+
+  /* Enable smooth vertical scrolling on modals in mobile browser */
+  .overlay-modal {
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    padding: 10px 10px 80px 10px;
+    overscroll-behavior-y: contain;
+  }
+
+  .modal-card {
+    margin: 6px auto 30px auto;
+    max-height: none;
+    overflow: visible;
+    touch-action: pan-y;
+    padding: 16px 14px;
+    width: 100%;
+  }
+
+  /* Mobile festive card layout adjustments to expose the global leaderboard */
+  .festive-card .mouse-hero-preview {
+    margin: 2px 0 6px;
+  }
+  .festive-card .hero-mushak-wrapper {
+    width: 160px;
+    height: 140px;
+  }
+  .festive-card .hero-mushak-wrapper canvas {
+    transform: scale(0.75);
+    transform-origin: center center;
+  }
+  .festive-card .title-main {
+    font-size: 26px;
+  }
+  .festive-card .title-accent {
+    font-size: 20px;
+  }
+  .festive-card .guide-grid {
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .festive-card .guide-item {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .festive-card .guide-emoji {
+    font-size: 16px;
+  }
+  .festive-card .guide-desc strong {
+    font-size: 11px;
+  }
+  .festive-card .guide-desc span {
+    font-size: 10px;
+  }
+  .festive-card .controls-legend {
+    margin-bottom: 8px;
+    gap: 3px;
+  }
+  .festive-card .legend-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+  .devotee-profile-banner {
+    padding: 6px 10px;
+    margin-bottom: 8px;
+  }
+  .btn-play-primary {
+    padding: 10px 16px;
+  }
+  .btn-play-primary .btn-text {
+    font-size: 18px;
+  }
+  .btn-play-primary .btn-subtext {
+    font-size: 10px;
+  }
+  #btn-leaderboard-start {
+    margin-top: 8px;
+    padding: 10px 14px;
+  }
 }
+
+/* Specific .layout class styles for mobile layout */
+.layout.game-container .overlay-modal,
+.overlay-modal.layout {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+}
+
+.layout.game-container .modal-card,
+.modal-card.layout {
+  margin: 6px auto 30px auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
 
 /* Game Canvas */
 #gameCanvas {

@@ -1227,7 +1227,8 @@
         lbEmpty: document.getElementById('lb-empty'),
         lbList: document.getElementById('lb-list'),
         lbPlayerPinned: document.getElementById('lb-player-pinned'),
-        lbPlayerPinnedContent: document.getElementById('lb-player-pinned-content')
+        lbPlayerPinnedContent: document.getElementById('lb-player-pinned-content'),
+        gameContainer: document.getElementById('gameContainer')
       };
 
       this.isAdminMode = false;
@@ -1238,10 +1239,47 @@
       this.setupEventListeners();
       this.updateHud();
       this.checkRegistrationOnLoad();
+      this.initMobileLayout();
 
       // Start RAF Loop
       this.lastTime = performance.now();
       requestAnimationFrame(this.gameLoop.bind(this));
+    }
+
+    // Mobile layout adjustment and gentle auto-scroll peek
+    initMobileLayout() {
+      const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      if (!isMobile) return; // Keep desktop layout completely untouched
+
+      if (this.dom.gameContainer) this.dom.gameContainer.classList.add('layout');
+      if (this.dom.startScreen) this.dom.startScreen.classList.add('layout');
+
+      // On mobile browsers, peek / scroll slightly to expose the Global Leaderboard button
+      const peekLeaderboard = () => {
+        const modal = this.dom.startScreen;
+        const lbBtn = this.dom.btnLeaderboardStart;
+        if (!modal || !lbBtn || modal.classList.contains('hidden')) return;
+
+        setTimeout(() => {
+          const modalRect = modal.getBoundingClientRect();
+          const btnRect = lbBtn.getBoundingClientRect();
+          // If button is near or below the visible viewport, smoothly scroll down a bit to expose it
+          if (btnRect.bottom > modalRect.bottom - 40) {
+            const scrollDistance = (btnRect.bottom - modalRect.bottom) + 30;
+            modal.scrollTo({
+              top: Math.max(modal.scrollTop + scrollDistance, 60),
+              behavior: 'smooth'
+            });
+          }
+        }, 500);
+      };
+
+      if (document.readyState === 'complete') {
+        peekLeaderboard();
+      } else {
+        window.addEventListener('load', peekLeaderboard);
+      }
+      setTimeout(peekLeaderboard, 800);
     }
 
     // Hero Preview in Start Screen Modal
