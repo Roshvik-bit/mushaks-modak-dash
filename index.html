@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mushak's Modak Dash | Ganesh Chaturthi Arcade Game</title>
+  <meta name="description" content="Help Mushak, Lord Ganesha's devoted companion, catch divine modaks and dodge obstacles in this festive arcade celebration of Ganesh Chaturthi!">
+  
+  <!-- Google Fonts: Festive & Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Outfit:wght@400;600;700;800;900&family=Rozha+One&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient festive background decorative elements -->
+  <div class="festive-stars" aria-hidden="true"></div>
+  <div class="temple-vignette" aria-hidden="true"></div>
+
+  <!-- Game Shell Container -->
+  <main id="game-container" class="game-container" role="main">
+    
+    <!-- Top HUD Overlay (In-Game) -->
+    <header id="game-hud" class="game-hud" aria-label="Game Status">
+      <div class="hud-left">
+        <div class="hud-box score-box">
+          <span class="hud-label">MODAKS</span>
+          <span id="score-display" class="hud-value">0</span>
+        </div>
+        <div class="hud-box combo-box" id="combo-container">
+          <span class="hud-label">COMBO</span>
+          <span id="combo-display" class="hud-value combo-text">1x</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <!-- Missed modak penalty gauge (3 misses = lose 1 life) -->
+        <div class="miss-meter" id="miss-meter" title="3 dropped modaks will cost 1 life!">
+          <span class="miss-dot" id="miss-1"></span>
+          <span class="miss-dot" id="miss-2"></span>
+          <span class="miss-dot" id="miss-3"></span>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <!-- 3 Lives (Diyas) -->
+        <div class="lives-container" id="lives-container" aria-label="Remaining Lives">
+          <span class="life-diya active" id="life-1" title="Life 1">🪔</span>
+          <span class="life-diya active" id="life-2" title="Life 2">🪔</span>
+          <span class="life-diya active" id="life-3" title="Life 3">🪔</span>
+        </div>
+        
+        <!-- Controls & Sound Toggles -->
+        <div class="hud-actions">
+          <button id="btn-pause" class="icon-btn" aria-label="Pause Game" title="Pause Game (Spacebar)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+          </button>
+          <button id="btn-sound" class="icon-btn" aria-label="Toggle Sound" title="Toggle Sound / Music">
+            <svg id="sound-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            <svg id="sound-icon-off" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Canvas -->
+    <canvas id="gameCanvas" width="540" height="960" aria-label="Mushak's Modak Dash Game Screen"></canvas>
+
+    <!-- Power-up Magnet / Shield notification banner -->
+    <div id="powerup-toast" class="powerup-toast hidden" aria-live="polite">
+      <span class="powerup-icon">✨</span>
+      <span id="powerup-text" class="powerup-text">MAHA PRASADAM! MAGNET ACTIVE</span>
+    </div>
+
+    <!-- START SCREEN MODAL -->
+    <section id="start-screen" class="overlay-modal screen-active" aria-modal="true" role="dialog">
+      <div class="modal-card festive-card">
+        <div class="festive-badge">GANESH CHATURTHI SPECIAL</div>
+        
+        <h1 class="game-title">
+          <span class="title-sub">Lord Ganesha Riding Mushak In</span>
+          <span class="title-main">MUSHAK’S</span>
+          <span class="title-accent">MODAK DASH</span>
+        </h1>
+
+        <div class="mouse-hero-preview">
+          <div class="hero-diya left">🪔</div>
+          <div class="hero-mushak-wrapper">
+            <canvas id="heroPreviewCanvas" width="220" height="205" aria-hidden="true"></canvas>
+          </div>
+          <div class="hero-diya right">🪔</div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-item">
+            <span class="guide-emoji">🥟</span>
+            <div class="guide-desc">
+              <strong>Catch Modaks</strong>
+              <span>Steamed (+10), Golden (+25), Divine Maha (+50)</span>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-emoji">🥥</span>
+            <div class="guide-desc">
+              <strong>Dodge Obstacles</strong>
+              <span>Watch out for rolling coconuts & mischievous crows!</span>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-emoji">⚡</span>
+            <div class="guide-desc">
+              <strong>Keep Combo Alive</strong>
+              <span>Catch consecutive modaks for massive multiplier bonuses!</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-legend">
+          <span class="legend-badge">💻 Desktop: <b>← →</b> or <b>A / D</b> or Mouse</span>
+          <span class="legend-badge">📱 Mobile: <b>Drag / Touch Screen</b></span>
+        </div>
+
+        <div class="high-score-banner">
+          <span>🏆 Best Offering:</span>
+          <strong id="start-high-score">0</strong>
+        </div>
+
+        <button id="btn-start" class="btn-play-primary" type="button">
+          <span class="btn-shine"></span>
+          <span class="btn-text">START DASH</span>
+          <span class="btn-subtext">Ganpati Bappa Morya! 🙏</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PAUSE SCREEN MODAL -->
+    <section id="pause-screen" class="overlay-modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card pause-card">
+        <div class="pause-symbol">⏸️</div>
+        <h2 class="modal-title">GAME PAUSED</h2>
+        <p class="pause-quote">"Devotion in every catch, joy in every modak!"</p>
+        
+        <div class="pause-stats">
+          <div>Current Score: <strong id="pause-score">0</strong></div>
+          <div>Current Combo: <strong id="pause-combo">1x</strong></div>
+        </div>
+
+        <div class="btn-stack">
+          <button id="btn-resume" class="btn-play-primary" type="button">RESUME</button>
+          <button id="btn-restart-pause" class="btn-secondary" type="button">RESTART</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GAME OVER SCREEN MODAL -->
+    <section id="gameover-screen" class="overlay-modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card gameover-card">
+        <div class="blessing-banner">🕉️ शुभ गणेशोत्सव 🕉️</div>
+        
+        <h2 class="gameover-title">Aarti Completed!</h2>
+        <p id="gameover-quote" class="gameover-quote">"Mushak rejoices in Lord Ganesha's blessings!"</p>
+
+        <div class="results-showcase">
+          <div class="result-tile main-score">
+            <span class="result-label">MODAKS OFFERED</span>
+            <span id="final-score" class="result-value">0</span>
+          </div>
+          
+          <div class="result-row">
+            <div class="result-tile">
+              <span class="result-label">HIGHEST COMBO</span>
+              <span id="final-combo" class="result-value sub">1x</span>
+            </div>
+            <div class="result-tile">
+              <span class="result-label">ALL-TIME BEST</span>
+              <span id="final-high-score" class="result-value sub highlight">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="new-high-score-badge" class="new-high-badge hidden">
+          🌟 NEW RECORD OFFERING! 🌟
+        </div>
+
+        <button id="btn-restart" class="btn-play-primary" type="button">
+          <span class="btn-shine"></span>
+          <span class="btn-text">PLAY AGAIN</span>
+          <span class="btn-subtext">Catch more modaks for Bappa! 🐭</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Mobile Touch Area / Indicators -->
+    <div id="mobile-touch-guide" class="mobile-touch-guide" aria-hidden="true">
+      <div class="touch-hint left"><span>◀</span></div>
+      <div class="touch-hint center"><span>Slide finger to move Mushak</span></div>
+      <div class="touch-hint right"><span>▶</span></div>
+    </div>
+  </main>
+
+  <footer class="game-footer">
+    <p>Crafted with devotion for the <strong>Ganesh Chaturthi Game Design Contest</strong> • Mangal Murti Morya!</p>
+  </footer>
+
+  <!-- Scripts: Sound Engine & Core Game Engine -->
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
