@@ -127,6 +127,23 @@ export default async function handler(req, res) {
 
         const safeScore = Math.min(Math.max(parseInt(score, 10) || 0, 0), 500000);
 
+        // Fetch current record first to avoid overriding a higher existing record
+        let finalScore = safeScore;
+        try {
+          const getRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/leaderboard?player_id=eq.${encodeURIComponent(playerId)}&select=high_score`,
+            { headers: getHeaders() }
+          );
+          if (getRes.ok) {
+            const current = await getRes.json();
+            if (current && current.length > 0 && typeof current[0].high_score === 'number') {
+              finalScore = Math.max(current[0].high_score, safeScore);
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Could not query current high score:', fetchErr);
+        }
+
         const patchRes = await fetch(
           `${SUPABASE_URL}/rest/v1/leaderboard?player_id=eq.${encodeURIComponent(playerId)}`,
           {
@@ -135,14 +152,14 @@ export default async function handler(req, res) {
             body: JSON.stringify({
               player_name: String(playerName || '').trim().slice(0, 40),
               university: String(university || '').trim().slice(0, 60),
-              high_score: safeScore,
+              high_score: finalScore,
               max_combo: Math.max(parseInt(maxCombo, 10) || 1, 1),
               updated_at: new Date().toISOString()
             })
           }
         );
 
-        return res.status(200).json({ success: patchRes.ok });
+        return res.status(200).json({ success: patchRes.ok, highScore: finalScore });
       }
 
       return res.status(400).json({ error: 'Unknown action.' });

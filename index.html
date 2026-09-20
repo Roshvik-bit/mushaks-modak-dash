@@ -262,8 +262,32 @@
         <p class="leaderboard-subtitle">Top Offerings Across Universities</p>
         
         <div class="leaderboard-stats-bar">
-          <span>👥 Total Devotees: <strong id="lb-total-count">...</strong></span>
+          <div class="lb-stat-item">
+            <span>👥 Devotees: <strong id="lb-total-count">...</strong></span>
+          </div>
+          <div class="lb-stat-item highlight-highest">
+            <span>👑 Highest Score: <strong id="lb-highest-score">...</strong></span>
+          </div>
           <button id="btn-lb-refresh" class="btn-text-action" type="button" title="Refresh Standings"><span class="refresh-icon">🔄</span> Refresh</button>
+        </div>
+
+        <!-- Spotlight Card for All-Time Highest Score -->
+        <div id="lb-spotlight-card" class="lb-spotlight-card hidden">
+          <div class="spotlight-left">
+            <span class="spotlight-crown">👑</span>
+            <div class="spotlight-info">
+              <span class="spotlight-badge">TEMPLE HIGHEST RECORD</span>
+              <div class="spotlight-devotee">
+                <span id="lb-spotlight-name" class="spotlight-player">...</span>
+                <span class="spotlight-dot">•</span>
+                <span id="lb-spotlight-uni" class="spotlight-uni">...</span>
+              </div>
+            </div>
+          </div>
+          <div class="spotlight-score-box">
+            <span id="lb-spotlight-score" class="spotlight-score-val">0</span>
+            <span class="spotlight-score-unit">MODAKS</span>
+          </div>
         </div>
 
         <div id="lb-admin-banner" class="lb-admin-banner hidden">
@@ -279,7 +303,7 @@
 
         <!-- Current Player Standings -->
         <div id="lb-player-pinned" class="lb-player-pinned hidden">
-          <span class="pinned-label">YOUR OFFERING:</span>
+          <span class="pinned-label">YOUR HIGHEST SCORE:</span>
           <div class="pinned-content" id="lb-player-pinned-content"></div>
         </div>
 

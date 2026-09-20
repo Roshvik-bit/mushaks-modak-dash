@@ -1223,6 +1223,11 @@
         lbAdminBanner: document.getElementById('lb-admin-banner'),
         btnAdminExit: document.getElementById('btn-admin-exit'),
         lbTotalCount: document.getElementById('lb-total-count'),
+        lbHighestScore: document.getElementById('lb-highest-score'),
+        lbSpotlightCard: document.getElementById('lb-spotlight-card'),
+        lbSpotlightScore: document.getElementById('lb-spotlight-score'),
+        lbSpotlightName: document.getElementById('lb-spotlight-name'),
+        lbSpotlightUni: document.getElementById('lb-spotlight-uni'),
         lbLoading: document.getElementById('lb-loading'),
         lbEmpty: document.getElementById('lb-empty'),
         lbList: document.getElementById('lb-list'),
@@ -1604,13 +1609,35 @@
           window.leaderboardService.fetchParticipantCount()
         ]);
 
-        this.dom.lbTotalCount.textContent = totalCount || (items ? items.length : 0);
+        const highestScore = (items && items.length > 0) ? (items[0].high_score || 0) : 0;
+        const topDevotee = (items && items.length > 0) ? items[0] : null;
+
+        if (this.dom.lbTotalCount) {
+          this.dom.lbTotalCount.textContent = totalCount || (items ? items.length : 0);
+        }
+        if (this.dom.lbHighestScore) {
+          this.dom.lbHighestScore.textContent = highestScore ? highestScore.toLocaleString() : '0';
+        }
+
+        if (this.dom.lbSpotlightCard) {
+          if (topDevotee && highestScore > 0) {
+            this.dom.lbSpotlightCard.classList.remove('hidden');
+            if (this.dom.lbSpotlightScore) this.dom.lbSpotlightScore.textContent = highestScore.toLocaleString();
+            if (this.dom.lbSpotlightName) this.dom.lbSpotlightName.textContent = topDevotee.player_name;
+            if (this.dom.lbSpotlightUni) this.dom.lbSpotlightUni.textContent = topDevotee.university;
+          } else {
+            this.dom.lbSpotlightCard.classList.add('hidden');
+          }
+        }
+
         this.dom.lbLoading.classList.add('hidden');
 
         if (!items || items.length === 0) {
           this.dom.lbList.replaceChildren();
           this.dom.lbEmpty.classList.remove('hidden');
           this.dom.lbPlayerPinned.classList.add('hidden');
+          if (this.dom.lbSpotlightCard) this.dom.lbSpotlightCard.classList.add('hidden');
+          if (this.dom.lbHighestScore) this.dom.lbHighestScore.textContent = '0';
           return;
         }
 
@@ -1627,18 +1654,23 @@
           else if (rank === 2) rankBadge = '🥈';
           else if (rank === 3) rankBadge = '🥉';
 
+          const isHighest = rank === 1;
+
           const row = document.createElement('div');
           row.className = `lb-row ${rank === 1 ? 'top-1' : ''} ${isCurrent ? 'is-current-player' : ''}`;
 
           row.innerHTML = `
             <div class="lb-rank">${rankBadge}</div>
             <div class="lb-devotee">
-              <div class="lb-player-name">${this.escapeHtml(item.player_name)}${isCurrent ? ' (You)' : ''}</div>
+              <div class="lb-player-name">
+                ${this.escapeHtml(item.player_name)}${isCurrent ? ' (You)' : ''}
+                ${isHighest ? '<span class="lb-crown-pill">👑 HIGHEST</span>' : ''}
+              </div>
               <div class="lb-university">${this.escapeHtml(item.university)}</div>
             </div>
             <div class="lb-score-col">
-              <div class="lb-score-val">${item.high_score}</div>
-              <div class="lb-score-unit">MODAKS</div>
+              <div class="lb-score-val">${(item.high_score || 0).toLocaleString()}</div>
+              <div class="lb-score-unit">${isHighest ? '👑 BEST' : 'MODAKS'}</div>
             </div>
           `;
 
@@ -1675,6 +1707,7 @@
         // If registered and not in top list, show pinned standing
         if (profile && !playerInTop) {
           this.dom.lbPlayerPinned.classList.remove('hidden');
+          const myBest = Math.max(profile.highScore || 0, this.highScore || 0);
           this.dom.lbPlayerPinnedContent.innerHTML = `
             <div class="lb-row is-current-player" style="margin: 0;">
               <div class="lb-rank">🌟</div>
@@ -1683,8 +1716,8 @@
                 <div class="lb-university">${this.escapeHtml(profile.university)}</div>
               </div>
               <div class="lb-score-col">
-                <div class="lb-score-val">${profile.highScore || 0}</div>
-                <div class="lb-score-unit">MODAKS</div>
+                <div class="lb-score-val">${myBest.toLocaleString()}</div>
+                <div class="lb-score-unit">YOUR BEST</div>
               </div>
             </div>
           `;
@@ -1807,7 +1840,7 @@
 
       // Synchronize with global Supabase leaderboard!
       if (window.leaderboardService) {
-        window.leaderboardService.syncScore(this.score, this.maxCombo);
+        window.leaderboardService.syncScore(this.highScore, this.maxCombo);
       }
 
       this.dom.finalScore.textContent = this.score;

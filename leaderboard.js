@@ -7,7 +7,8 @@
 (function () {
   const API_ENDPOINT = '/api/leaderboard';
   const PROFILE_STORAGE_KEY = 'mushak_devotee_profile_v1';
-  const HIGH_SCORE_KEY = 'mushak_modak_high_score';
+  const HIGH_SCORE_KEY = 'mushak_modak_dash_highscore_v1';
+  const LEGACY_HIGH_SCORE_KEY = 'mushak_modak_high_score';
 
   class LeaderboardService {
     constructor() {
@@ -15,11 +16,29 @@
       this.cachedCount = null;
     }
 
+    // Safely retrieve highest score across localStorage keys and profile
+    getStoredHighScore() {
+      const v1 = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10);
+      const v2 = parseInt(localStorage.getItem(LEGACY_HIGH_SCORE_KEY) || '0', 10);
+      const prof = this.profile?.highScore || 0;
+      return Math.max(isNaN(v1) ? 0 : v1, isNaN(v2) ? 0 : v2, prof);
+    }
+
     // Load devotee profile from localStorage
     loadLocalProfile() {
       try {
         const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed) {
+            // Re-sync with actual high score if available
+            const best = this.getStoredHighScore();
+            if (best > (parsed.highScore || 0)) {
+              parsed.highScore = best;
+            }
+            return parsed;
+          }
+        }
       } catch (e) {
         console.warn('Could not parse local devotee profile', e);
       }
@@ -52,7 +71,7 @@
       }
 
       const playerId = this.profile?.playerId || this.generatePlayerId();
-      const currentHighScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10);
+      const currentHighScore = this.getStoredHighScore();
 
       this.profile = {
         playerId,
@@ -63,6 +82,8 @@
       };
 
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(this.profile));
+      localStorage.setItem(HIGH_SCORE_KEY, currentHighScore.toString());
+      localStorage.setItem(LEGACY_HIGH_SCORE_KEY, currentHighScore.toString());
 
       try {
         await fetch(API_ENDPOINT, {
@@ -92,14 +113,15 @@
       if (!this.hasProfile()) return;
 
       const playerId = this.profile.playerId;
-      const isNewHighScore = score > (this.profile.highScore || 0);
+      const numScore = Math.max(parseInt(score, 10) || 0, 0);
+      const storedBest = this.getStoredHighScore();
+      const currentHighest = Math.max(numScore, storedBest);
 
-      if (isNewHighScore) {
-        this.profile.highScore = score;
-        this.profile.updatedAt = new Date().toISOString();
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(this.profile));
-        localStorage.setItem(HIGH_SCORE_KEY, score.toString());
-      }
+      this.profile.highScore = currentHighest;
+      this.profile.updatedAt = new Date().toISOString();
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(this.profile));
+      localStorage.setItem(HIGH_SCORE_KEY, currentHighest.toString());
+      localStorage.setItem(LEGACY_HIGH_SCORE_KEY, currentHighest.toString());
 
       try {
         await fetch(API_ENDPOINT, {
@@ -111,7 +133,7 @@
               playerId,
               playerName: this.profile.playerName,
               university: this.profile.university,
-              score: isNewHighScore ? score : this.profile.highScore,
+              score: currentHighest,
               maxCombo
             }
           })
